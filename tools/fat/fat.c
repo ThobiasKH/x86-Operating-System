@@ -124,6 +124,35 @@ bool readFile(DirectoryEntry* fileEntry, FILE* disk, uint8_t* outputBuffer)
     return ok;
 }
 
+void padFilename(const char* input, char* output)
+{
+    // Assume input is a filename like "TEST.TXT" (without spaces)
+    // Copy up to 8 characters for the name part
+    int i = 0;
+    for (; i < 8 && input[i] != '.' && input[i] != '\0'; i++) {
+        output[i] = toupper(input[i]);  // Convert to uppercase as FAT12 is case-insensitive
+    }
+    for (; i < 8; i++) {
+        output[i] = ' ';  // Pad with spaces
+    }
+
+    // Now handle the extension part, if any
+    const char* ext = strchr(input, '.');
+    if (ext) {
+        ext++;  // Move past the dot
+        for (int j = 0; j < 3 && ext[j] != '\0'; j++) {
+            output[8 + j] = toupper(ext[j]);  // Copy and convert to uppercase
+        }
+        for (int j = strlen(ext); j < 3; j++) {
+            output[8 + j] = ' ';  // Pad with spaces
+        }
+    } else {
+        // No extension found, pad extension with spaces
+        output[8] = output[9] = output[10] = ' ';
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     if (argc < 3) {
@@ -155,7 +184,9 @@ int main(int argc, char** argv)
         return -4;
     }
 
-    DirectoryEntry* fileEntry = findFile(argv[2]);
+    char paddedName[11];
+    padFilename(argv[2], paddedName);
+    DirectoryEntry* fileEntry = findFile(paddedName);
     if (!fileEntry) {
         fprintf(stderr, "Could not find file %s!\n", argv[2]);
         free(g_Fat);
